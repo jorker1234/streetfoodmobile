@@ -1,4 +1,6 @@
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
@@ -7,16 +9,55 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React from 'react';
+import React, {useState} from 'react';
 import {StackScreenProps} from '@react-navigation/stack';
 import {RootStackParamList} from '../App';
+import {ApiStatus} from '../Entities/Utility';
+import {changePassword} from '../Apis/User';
 
 type Props = StackScreenProps<RootStackParamList, 'ChangePasswordScreen'>;
 
 const StoreScreen: React.FC<Props> = ({navigation}) => {
-  const handleSave = () => {
+  const [oldPassword, setOldPassword] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [status, setStatus] = useState(ApiStatus.COMPLETE);
+
+  const validateForm = () => {
+    if (!oldPassword) {
+      Alert.alert('กรุณากรอก รหัสผ่านเดิม');
+      return false;
+    }
+    if (!password) {
+      Alert.alert('กรุณากรอก รหัสผ่านใหม่');
+      return false;
+    }
+    if (!confirmPassword) {
+      Alert.alert('กรุณากรอก ยืนยันรหัสผ่านใหม่');
+      return false;
+    }
+    if (confirmPassword !== password) {
+      Alert.alert('กรุณากรอก รหัสผ่านใหม่ ให้ตรงกับ ยืนยันรหัสผ่านใหม่');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) {
+      return;
+    }
+    setStatus(ApiStatus.PENDING);
+    const result = await changePassword(oldPassword, password);
+    setStatus(ApiStatus.COMPLETE);
+    if (result.error) {
+      Alert.alert(result.error?.message);
+      return;
+    }
     navigation.goBack();
   };
+
+  const isPending = status === ApiStatus.PENDING;
   return (
     <KeyboardAvoidingView behavior="padding" style={styles.container}>
       <ScrollView>
@@ -28,6 +69,8 @@ const StoreScreen: React.FC<Props> = ({navigation}) => {
                 style={styles.textbox}
                 autoCorrect={false}
                 secureTextEntry={true}
+                value={oldPassword}
+                onChangeText={setOldPassword}
               />
             </View>
             <View style={styles.cardForm}>
@@ -36,6 +79,8 @@ const StoreScreen: React.FC<Props> = ({navigation}) => {
                 style={styles.textbox}
                 autoCorrect={false}
                 secureTextEntry={true}
+                value={password}
+                onChangeText={setPassword}
               />
             </View>
             <View style={styles.cardForm}>
@@ -44,10 +89,18 @@ const StoreScreen: React.FC<Props> = ({navigation}) => {
                 style={styles.textbox}
                 autoCorrect={false}
                 secureTextEntry={true}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
               />
             </View>
-            <TouchableOpacity style={styles.button} onPress={handleSave}>
-              <Text style={styles.buttonText}>บันทึก</Text>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleSave}
+              disabled={isPending}>
+              {status === ApiStatus.COMPLETE && (
+                <Text style={styles.buttonText}>บันทึก</Text>
+              )}
+              {isPending && <ActivityIndicator size="small" color="#0000ff" />}
             </TouchableOpacity>
           </View>
         </View>

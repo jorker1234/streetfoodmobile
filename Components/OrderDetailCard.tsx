@@ -8,7 +8,6 @@ type Props = {
 };
 
 const OrderDetailCard: React.FC<Props> = ({id, onClose}) => {
-  console.log(id);
   return (
     <View>
       <TouchableOpacity onPress={onClose}>

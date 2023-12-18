@@ -1,4 +1,4 @@
-import React, {createContext, useContext, useState} from 'react';
+import React, {createContext, useCallback, useContext, useState} from 'react';
 import {Asset} from 'react-native-image-picker';
 
 type Props = {
@@ -19,9 +19,9 @@ export const usePhotoContext = () => {
 
 const PhotoProvider: React.FC<Props> = ({children}) => {
   const [photo, setPhoto] = useState<Asset | null>(null);
-  const resetPhoto = () => {
+  const resetPhoto = useCallback(() => {
     setPhoto(null);
-  };
+  }, [setPhoto]);
   const store = {photo, setPhoto, resetPhoto};
   return (
     <PhotoContext.Provider value={store}>{children}</PhotoContext.Provider>

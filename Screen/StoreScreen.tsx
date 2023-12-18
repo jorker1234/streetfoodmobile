@@ -4,47 +4,92 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {StackScreenProps} from '@react-navigation/stack';
 import {RootStackParamList} from '../App';
 import PhotoUploader from '../Components/PhotoUploader';
 import {Asset} from 'react-native-image-picker';
 import FontAwesome5Icon from 'react-native-vector-icons/FontAwesome5';
 import QueueQrCode from '../Components/QueueQrCode';
-import {getShop} from '../Apis/Shop';
-import {IShop} from '../Entities/Menu';
+import {getShop, updateShop} from '../Apis/Shop';
+import {IShop} from '../Entities/Shop';
+import {ApiStatus} from '../Entities/Utility';
+import {useAuthenticate} from '../Contexts/AuthenticateContext';
+import {AlertDialog} from '../Components/Dialog';
+import TextBox from '../Components/TextBox';
+import Button from '../Components/Button';
+import UtilityStyle from '../Themes/Utilities';
 
 type Props = StackScreenProps<RootStackParamList, 'StoreScreen'>;
 
 const StoreScreen: React.FC<Props> = ({navigation}) => {
+  const [status, setStatus] = useState(ApiStatus.COMPLETE);
+  const [firstStatus, setFirstStatus] = useState(ApiStatus.PENDING);
+  const isPending = status === ApiStatus.PENDING;
+  const isFirstPending = firstStatus === ApiStatus.PENDING;
+  const {user} = useAuthenticate();
+  const shopId = user?.shopId ?? '';
+
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [shop, setShop] = useState<IShop | null>(null);
-  const loadData = async () => {
-    const shopData = await getShop('645341bd4d1ff223e331b588');
-    setShop(shopData);
-  };
+  const [photo, setPhoto] = useState<Asset | null>(null);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [receiveNumber, setReceiveNumber] = useState('');
+  const [imageUrl, setimageUrl] = useState('');
+  const [promptpay, setPromptpay] = useState('');
+
+  const loadData = useCallback(async () => {
+    if (shopId) {
+      setStatus(ApiStatus.PENDING);
+      const result = await getShop(shopId);
+      setStatus(ApiStatus.COMPLETE);
+      setFirstStatus(ApiStatus.COMPLETE);
+      if (result.error) {
+        AlertDialog(result.error?.message);
+        return;
+      }
+      if (result.data) {
+        const shopData = result.data ?? ({} as IShop);
+        setName(shopData.name);
+        setPhone(shopData.phone);
+        setReceiveNumber(shopData.receiveNumber);
+        setimageUrl(shopData.imageUrl);
+        setPromptpay(shopData.promptpay);
+      }
+    }
+  }, [shopId]);
+
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
-  const image = shop?.imageUrl ?? '';
-  const qrcodeUrl =
-    'https://streetfood-f6b16.web.app/menu?shopId=645341bd4d1ff223e331b588&orderId=6453d8c795ef1c9891773cb1';
-  const handleChange = (photo: Asset | null) => {
-    console.log(photo);
+  const handleChange = (asset: Asset | null) => {
+    setPhoto(asset);
   };
   const handleQrcodeView = () => {
-    console.log('OK');
     setIsModalVisible(true);
   };
   const handleQrcodeClose = () => {
     setIsModalVisible(false);
   };
-  const handleSave = () => {
+  const handleSave = async () => {
+    setStatus(ApiStatus.PENDING);
+    const shop = {
+      id: shopId,
+      name,
+      phone,
+      receiveNumber,
+      imageUrl,
+    } as IShop;
+    const result = await updateShop(shop, photo);
+    setStatus(ApiStatus.COMPLETE);
+    if (result.error) {
+      AlertDialog(result.error?.message);
+      return;
+    }
     navigation.goBack();
   };
   return (
@@ -53,39 +98,58 @@ const StoreScreen: React.FC<Props> = ({navigation}) => {
         <View style={styles.card}>
           <View style={styles.cardBody}>
             <PhotoUploader
-              photoUri={image}
+              photoUri={imageUrl}
               defaultIconName="store"
               onChange={handleChange}
             />
             <View style={styles.cardForm}>
               <Text>ชื่อร้าน</Text>
-              <TextInput style={styles.textbox} defaultValue={shop?.name} />
+              <TextBox
+                value={name}
+                onChangeText={setName}
+                isPending={isFirstPending}
+              />
             </View>
             <View style={styles.cardForm}>
               <Text>เบอร์โทรศัพท์</Text>
-              <TextInput style={styles.textbox} defaultValue={shop?.phone} />
+              <TextBox
+                value={phone}
+                onChangeText={setPhone}
+                isPending={isFirstPending}
+              />
             </View>
             <View style={styles.cardForm}>
               <Text>บัญชีรับเงิน</Text>
+              <Text style={styles.subTitle}>
+                (เบอร์โทรศัพท์ หรือ หมายเลขบัตรประชาชน)
+              </Text>
               <View style={styles.horizantal}>
-                <TextInput
-                  style={styles.textbox}
-                  defaultValue={shop?.receiveNumber}
-                />
-                <TouchableOpacity
-                  style={styles.cardIcon}
-                  onPress={handleQrcodeView}>
-                  <FontAwesome5Icon name="qrcode" style={styles.icon} />
-                </TouchableOpacity>
+                <View style={UtilityStyle.flex1}>
+                  <TextBox
+                    value={receiveNumber}
+                    onChangeText={setReceiveNumber}
+                    isPending={isFirstPending}
+                  />
+                </View>
+                {!!promptpay && (
+                  <TouchableOpacity
+                    style={styles.cardIcon}
+                    onPress={handleQrcodeView}>
+                    <FontAwesome5Icon name="qrcode" style={styles.icon} />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
-            <TouchableOpacity style={styles.button} onPress={handleSave}>
-              <Text style={styles.buttonText}>บันทึก</Text>
-            </TouchableOpacity>
+            <Button
+              text="บันทึก"
+              onPress={handleSave}
+              disabled={isPending}
+              isPending={!isFirstPending && isPending}
+            />
           </View>
         </View>
         <Modal visible={isModalVisible} transparent={true} animationType="fade">
-          <QueueQrCode url={qrcodeUrl} onClose={handleQrcodeClose} />
+          <QueueQrCode url={promptpay} onClose={handleQrcodeClose} />
         </Modal>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -139,6 +203,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignContent: 'center',
     marginHorizontal: 10,
+  },
+  subTitle: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
   },
   icon: {
     color: '#B8860B',

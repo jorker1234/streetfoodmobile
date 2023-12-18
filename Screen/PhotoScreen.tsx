@@ -1,10 +1,4 @@
-import {
-  ImageBackground,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import {ImageBackground, Modal, TouchableOpacity, View} from 'react-native';
 import React, {useState} from 'react';
 import SettingCard from '../Components/SettingCard';
 import {
@@ -16,6 +10,9 @@ import {StackScreenProps} from '@react-navigation/stack';
 import {RootStackParamList} from '../App';
 import {usePhotoContext} from '../Contexts/PhotoContext';
 import FontAwesome5Icons from 'react-native-vector-icons/FontAwesome5';
+import UtilityStyle from '../Themes/Utilities';
+import Styles from './Styles/PhotoScreenStyle';
+
 type Props = StackScreenProps<RootStackParamList, 'PhotoScreen'>;
 
 const PhotoScreen: React.FC<Props> = ({navigation, route}) => {
@@ -26,13 +23,21 @@ const PhotoScreen: React.FC<Props> = ({navigation, route}) => {
     setIsModalVisible(true);
   };
   const handleChoosePhoto = async () => {
-    const {assets} = await launchImageLibrary({mediaType: 'photo'});
+    const {assets} = await launchImageLibrary({
+      mediaType: 'photo',
+      maxHeight: 300,
+      maxWidth: 300,
+    });
     if (assets && assets.length > 0) {
       uploadPhoto(assets[0]);
     }
   };
   const handleTakePhoto = async () => {
-    const {assets} = await launchCamera({mediaType: 'photo'});
+    const {assets} = await launchCamera({
+      mediaType: 'photo',
+      maxHeight: 300,
+      maxWidth: 300,
+    });
     if (assets && assets.length > 0) {
       uploadPhoto(assets[0]);
     }
@@ -55,14 +60,15 @@ const PhotoScreen: React.FC<Props> = ({navigation, route}) => {
       />
       <SettingCard icon="camera" title="ถ่ายภาพ" onPress={handleTakePhoto} />
       <Modal visible={isModalVisible} animationType="slide">
-        <View style={styles.container}>
+        <View style={UtilityStyle.flex1}>
           <ImageBackground
             source={{uri: photoUrl}}
-            style={styles.backgroundImage}>
+            style={Styles.background}
+            resizeMode="contain">
             <TouchableOpacity onPress={handleCloseModal}>
               <FontAwesome5Icons
                 name="times-circle"
-                style={styles.closeButton}
+                style={Styles.closeButton}
               />
             </TouchableOpacity>
           </ImageBackground>
@@ -73,18 +79,3 @@ const PhotoScreen: React.FC<Props> = ({navigation, route}) => {
 };
 
 export default PhotoScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  backgroundImage: {
-    flex: 1,
-    resizeMode: 'cover', // or 'stretch'
-  },
-  closeButton: {
-    fontSize: 40,
-    color: '#B8860B',
-    margin: 20,
-  },
-});

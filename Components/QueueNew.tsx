@@ -1,4 +1,6 @@
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   StyleSheet,
   Text,
@@ -6,17 +8,36 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React from 'react';
+import React, {useState} from 'react';
 import FontAwesome5Icons from 'react-native-vector-icons/FontAwesome5';
+import {createOrder} from '../Apis/Order';
+import Components from '../Themes/Components';
+import {useAuthenticate} from '../Contexts/AuthenticateContext';
+import {ApiStatus} from '../Entities/Utility';
+import Colors from '../Themes/Colors';
 
 type Props = {
   onClose: (isRefresh: boolean) => void;
 };
 
 const QueueNew: React.FC<Props> = ({onClose}) => {
-  const handleCreate = () => {
+  const [customer, setCustomer] = useState('');
+  const [status, setStatus] = useState(ApiStatus.COMPLETE);
+  const {user} = useAuthenticate();
+  const shopId = user?.shopId ?? '';
+
+  const handleCreate = async () => {
+    setStatus(ApiStatus.PENDING);
+    const result = await createOrder({customer, shopId});
+    setStatus(ApiStatus.COMPLETE);
+    if (result.error) {
+      Alert.alert(result.error?.message);
+      return;
+    }
     onClose(true);
   };
+
+  const isPending = status === ApiStatus.PENDING;
 
   return (
     <KeyboardAvoidingView style={styles.dialog} behavior="padding">
@@ -28,14 +49,26 @@ const QueueNew: React.FC<Props> = ({onClose}) => {
           </TouchableOpacity>
         </View>
         <TextInput
-          style={styles.textbox}
+          style={Components.textbox}
+          autoCapitalize="none"
           autoCorrect={false}
           autoFocus={true}
           placeholder="ชื่อลูกค้า"
-          returnKeyType="next"
+          placeholderTextColor="#CCCCCC"
+          value={customer}
+          onChangeText={setCustomer}
         />
-        <TouchableOpacity style={styles.button} onPress={handleCreate}>
-          <Text style={styles.buttonText}>สร้าง</Text>
+
+        <TouchableOpacity
+          style={Components.primaryButton}
+          onPress={handleCreate}
+          disabled={isPending}>
+          {status === ApiStatus.COMPLETE && (
+            <Text style={Components.primaryButtonText}>สร้าง</Text>
+          )}
+          {isPending && (
+            <ActivityIndicator size="small" color={Colors.activityIndicator} />
+          )}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

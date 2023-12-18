@@ -1,16 +1,15 @@
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import React, {useState} from 'react';
+import React from 'react';
 import QueueScreen from './QueueScreen';
 import OrderScreen from './OrderScreen';
 import SettingScreen from './SettingScreen';
 import FontAwesome5Icons from 'react-native-vector-icons/FontAwesome5';
 import {IconProps} from 'react-native-vector-icons/Icon';
 import HeaderButton from '../Components/HeaderButton';
-import {Modal} from 'react-native';
-import QueueNew from '../Components/QueueNew';
-import PaymentScreen from './PaymentScreen';
 import {RootStackParamList} from '../App';
 import {StackScreenProps} from '@react-navigation/stack';
+import RouterParamProvider from '../Contexts/RouterParamContext';
+import PaymentScreen from './PaymentScreen';
 
 type Props = StackScreenProps<RootStackParamList, 'MainScreen'>;
 
@@ -28,20 +27,12 @@ const MainScreenTabBarIcon: React.FC<IconProps> = ({color, size, name}) => (
 );
 
 const MainScreen: React.FC<Props> = ({navigation}) => {
-  const [isModalVisible, setModalVisible] = useState(false);
-  const handleOpenNewQrCode = () => {
-    setModalVisible(true);
-  };
-  const handleQrCodeClose = (isRefresh: boolean) => {
-    console.log(isRefresh);
-    setModalVisible(false);
-  };
   const handleProfile = () => {
     navigation.navigate('ProfileScreen');
   };
 
   return (
-    <>
+    <RouterParamProvider>
       <Tab.Navigator
         initialRouteName="QueueScreen"
         screenOptions={{
@@ -57,14 +48,10 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
                 iconName: 'user-circle',
                 handlePress: handleProfile,
               }),
-            headerRight: () =>
-              HeaderButton({
-                iconName: 'plus-circle',
-                handlePress: handleOpenNewQrCode,
-              }),
             tabBarLabel: 'QR Code',
             tabBarIcon: ({color, size}) =>
               MainScreenTabBarIcon({color, size, name: 'qrcode'}),
+            unmountOnBlur: true,
           }}
         />
         <Tab.Screen
@@ -80,6 +67,7 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
             tabBarLabel: 'รายการโอนเงิน',
             tabBarIcon: ({color, size}) =>
               MainScreenTabBarIcon({color, size, name: 'file-invoice-dollar'}),
+            unmountOnBlur: true,
           }}
         />
         <Tab.Screen
@@ -95,6 +83,7 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
             tabBarLabel: 'รายการสั่งซื้อ',
             tabBarIcon: ({color, size}) =>
               MainScreenTabBarIcon({color, size, name: 'receipt'}),
+            unmountOnBlur: true,
           }}
         />
         <Tab.Screen
@@ -113,10 +102,7 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
           }}
         />
       </Tab.Navigator>
-      <Modal visible={isModalVisible} transparent={true} animationType="slide">
-        <QueueNew onClose={handleQrCodeClose} />
-      </Modal>
-    </>
+    </RouterParamProvider>
   );
 };
 

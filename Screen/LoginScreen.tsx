@@ -1,108 +1,74 @@
-import {
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-} from 'react-native';
+import {View, KeyboardAvoidingView, Alert, Image} from 'react-native';
 import React, {useState} from 'react';
 import type {StackScreenProps} from '@react-navigation/stack';
 import type {RootStackParamList} from '../App';
+import {ApiStatus} from '../Entities/Utility';
+import {useAuthenticate} from '../Contexts/AuthenticateContext';
+import Styles from './Styles/LoginStyle';
+import Button from '../Components/Button';
+import TextBox from '../Components/TextBox';
+
 type Props = StackScreenProps<RootStackParamList, 'LoginScreen'>;
 
 const LoginScreen = ({navigation}: Props) => {
+  const {signin} = useAuthenticate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [status, setStatus] = useState(ApiStatus.COMPLETE);
 
-  let txtPassword: TextInput;
-  const initPassword = (input: TextInput) => {
-    txtPassword = input;
-  };
-  const onUsernameSubmit = () => {
-    txtPassword?.focus();
+  // let txtPassword: TextInput;
+  // const initPassword = (input: TextInput) => {
+  //   txtPassword = input;
+  // };
+  // const onUsernameSubmit = () => {
+  //   txtPassword?.focus();
+  // };
+
+  const onLogin = async () => {
+    setStatus(ApiStatus.PENDING);
+    const result = await signin(username, password);
+    setStatus(ApiStatus.COMPLETE);
+    if (result.error) {
+      Alert.alert(result.error?.message);
+      return;
+    }
+    if (result.data) {
+      navigation.navigate('MainScreen');
+    }
   };
 
-  const onLogin = () => {
-    const params = {username, password};
-    console.log(params);
-    navigation.navigate('MainScreen');
-  };
+  const isPending = status === ApiStatus.PENDING;
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior="padding">
-      <View style={styles.logoContainer}>
-        <View style={styles.logo} />
+    <KeyboardAvoidingView style={Styles.container} behavior="padding">
+      <View style={Styles.logo}>
+        <Image source={require('../Images/app.png')} />
       </View>
-      <View style={styles.loginContainer}>
-        <TextInput
-          style={styles.textbox}
-          autoCorrect={false}
+      <View style={Styles.form}>
+        <TextBox
           placeholder="Username"
-          placeholderTextColor="#CCCCCC"
           returnKeyType="next"
           value={username}
           onChangeText={setUsername}
-          onSubmitEditing={onUsernameSubmit}
+          //onSubmitEditing={onUsernameSubmit}
         />
-        <TextInput
-          ref={initPassword}
-          style={styles.textbox}
-          autoCorrect={false}
-          secureTextEntry={true}
+        <TextBox
+          //ref={initPassword}
           placeholder="Password"
-          placeholderTextColor="#CCCCCC"
+          secureTextEntry={true}
           value={password}
           onChangeText={setPassword}
           onSubmitEditing={onLogin}
         />
-        <TouchableOpacity style={styles.button} onPress={onLogin}>
-          <Text style={styles.buttonText}>เข้าสู่ระบบ</Text>
-        </TouchableOpacity>
+        <Button
+          text="เข้าสู่ระบบ"
+          onPress={onLogin}
+          disabled={isPending}
+          isPending={isPending}
+        />
       </View>
     </KeyboardAvoidingView>
   );
 };
 
 export default LoginScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    alignItems: 'center',
-    backgroundColor: '#FAEBD7',
-  },
-  logoContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    borderRadius: 16,
-    backgroundColor: '#B8860B',
-  },
-  loginContainer: {
-    flexGrow: 1,
-    gap: 14,
-    padding: 14,
-    width: '100%',
-  },
-  textbox: {
-    backgroundColor: '#FFF',
-    borderRadius: 4,
-    height: 40,
-    padding: 4,
-    color: '#B8860B',
-  },
-  button: {
-    marginTop: 10,
-    backgroundColor: '#B8860B',
-    height: 40,
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: '#FFDAB9',
-    textAlign: 'center',
-  },
-});
